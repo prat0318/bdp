@@ -1,0 +1,11 @@
+{
+    "namespace": "com.refactorlabs.cs378.wordcount",
+    "type": "record",
+    "name": "WordCountData",
+    "fields": [
+        {
+            "name": "count",
+            "type": "long"
+        }
+    ]
+}
