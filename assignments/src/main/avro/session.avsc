@@ -1,0 +1,70 @@
+{"namespace": "com.refactorlabs.cs378.sessions",
+ "type": "record",
+ "name": "Session",
+ "fields": [
+      {"name": "user_id", "type": "string"},
+      {"name": "events",
+       "type": {"type": "array",
+       "name": "event_types1",
+                "items": {"type": "record",
+                          "name": "Event",
+                          "fields": [
+                              {"name": "event_type",
+                               "type": {"type": "enum",
+                                        "name": "EventType",
+                                        "symbols": [ "CHANGE", "CLICK", "CONTACT_FORM_STATUS",
+                                                     "EDIT", "SHARE", "SHOW", "SUBMIT", "VISIT" ]
+                                       }
+                               },
+                              {"name": "event_subtype",
+                               "type": {"type": "enum", "name": "EventSubtype",
+                                        "symbols": [ "CONTACT_FORM", "MARKET_REPORT", "CONTACT_FORM_TYPE",
+                                        "ALTERNATIVE", "CONTACT_BANNER", "CONTACT_BUTTON", "DEALER_PHONE",
+                                        "FEATURES_SECTION", "GET_DIRECTIONS", "SHOW_MORE_BADGES",
+                                        "TEST_DRIVE_LINK", "VEHICLE_HISTORY_REPORT_LINK", "ERROR",
+                                        "SUCCESS", "BADGE_DETAIL", "PHOTO_MODAL", "BADGES", "FEATURES",
+                                        "ALTERNATIVES", "VEHICLE_HISTORY"]
+                                       }
+                              },
+                              {"name": "event_timestamp", "type": "string" },
+                              {"name": "page", "type": "string"},
+                              {"name": "referrer", "type": "string"},
+                              {"name": "referring_domain", "type": "string"},
+                              {"name": "city", "type": "string"},
+                              {"name": "region", "type": "string"},
+                              {"name": "vin", "type": "string"},
+                              {"name": "vehicle_condition", "type": {"type": "enum", "name": "Type",
+                                "symbols": ["CPO", "NEW", "USED"]}
+                              },
+                              {"name": "year", "type": "int" },
+                              {"name": "make", "type": "string"},
+                              {"name": "model", "type": "string"},
+                              {"name": "trim", "type": "string"},
+                              {"name": "body_style", "type": ["null", {"type": "enum", "name": "BodyStyle",
+                                "symbols": ["CHASSIS", "CONVERTIBLE", "COUPE", "HATCHBACK",
+                                "MINIVAN", "PICKUP", "SUV", "VAN", "WAGON", "SEDAN"]}]
+                              },
+                              {"name": "subtrim", "type": "string" },
+                              {"name": "cab_style", "type": ["null", "string"] },
+                              {"name": "features", "type": {"type": "array", "items": "string",
+                                                            "name": "feature"}},
+                              {"name": "initial_price", "type": "float"},
+                              {"name": "mileage", "type": "int"},
+                              {"name": "mpg", "type": "int"},
+                              {"name": "exterior_color", "type": "string"},
+                              {"name": "interior_color", "type": "string"},
+                              {"name": "engine_displacement", "type": "string"},
+                              {"name": "engine", "type": "string"},
+                              {"name": "transmission", "type": "string"},
+                              {"name": "drive_type", "type": "string" },
+                              {"name": "fuel", "type": "string"},
+                              {"name": "image_count", "type": "int"},
+                              {"name": "initial_carfax_free_report", "type": "boolean"},
+                              {"name": "carfax_one_owner", "type": "boolean" },
+                              {"name": "initial_cpo", "type": "boolean"}
+                              ]
+                          }
+                }
+       }
+   ]
+ }

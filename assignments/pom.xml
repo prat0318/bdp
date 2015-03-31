@@ -7,7 +7,7 @@
     <groupId>com.refactorlabs.cs378</groupId>
     <artifactId>bdp</artifactId>
     <packaging>jar</packaging>
-    <version>0.5</version>
+    <version>0.7</version>
 
     <description>Java code for CS 378 - Big Data Programming</description>
 
