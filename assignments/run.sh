@@ -9,13 +9,13 @@ export RND=$(date +%s)
 export ENV=bdp
 export EID=pa6768
 export ASSGN=$1
-export MainClass=ReduceJoin
+export MainClass=MultipleOutput
 # Small is 6898/sessions.avro
-# export input1=pa6768/output/assign7_avro_1426966898/sessions.avro
-export input1=pa6768/output/assign7_avro_1426964469/sessions2.avro
+export input1=pa6768/output/assign7_avro_1426966898/sessions.avro
+# export input1=pa6768/output/assign7_avro_1426964469/sessions2.avro
 # export input2=dataSet7Small.csv
-export input2=dataSet7.csv
-export JAVA_HOME=/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
+# export input2=dataSet7.csv
+# export JAVA_HOME=/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
 
 echo "Building package..."
 mvn package
@@ -36,7 +36,6 @@ if [ $? -eq 0 ]; then
                                    `"Jar=s3://utcs378/$EID/jars/bdp-0.$ASSGN.jar,"`
                                    `"Args=com.refactorlabs.cs378.assign$ASSGN.$MainClass,"`
                                         `"s3n://utcs378/$input1,"`
-                                        `"s3n://utcs378/data/$input2,"`
                                         `"s3n://utcs378/$EID/output/assign${ASSGN}_$RND" \
                            --auto-terminate \
                            --no-visible-to-all-users \

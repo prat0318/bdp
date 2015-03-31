@@ -20,6 +20,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -50,7 +51,17 @@ public class MultipleOutput extends Configured implements Tool {
      * The Map class for word statistics.  Extends class Mapper, provided by Hadoop.
      * This class defines the map() function for the word statistics example.
      */
-    public static class SessionMapClass extends Mapper<AvroKey<Session>, NullWritable, AvroKey<CharSequence>, AvroValue<VinImpressionCounts>> {
+
+    public static enum SESSION_COUNTERS {
+        SUBMITTER,
+        SHARER,
+        CLICKER,
+        SHOWER,
+        VISITOR,
+        OTHER
+    };
+
+    public static class SessionMapClass extends Mapper<AvroKey<Session>, NullWritable, AvroKey<CharSequence>, AvroValue<Session>> {
 
         private AvroMultipleOutputs multipleOutputs;
 
@@ -61,50 +72,43 @@ public class MultipleOutput extends Configured implements Tool {
         @Override
         public void map(AvroKey<Session> value, NullWritable _, Context context)
                 throws IOException, InterruptedException {
-
+            CharSequence key = value.datum().getUserId();
             List<Event> events = value.datum().getEvents();
-            Set<CharSequence> uniques = new HashSet<CharSequence>();
-            Set<CharSequence> submitContactForm = new HashSet<CharSequence>();
-            Set<CharSequence> shareMarketReport = new HashSet<CharSequence>();
-            Map<EventSubtype, Set<CharSequence>> clicks = new HashMap<EventSubtype, Set<CharSequence>>();
+            Set<EventType> set = new HashSet<EventType>();
+
+            if(events.size() > 1000) return;
 
             for (Event event: events) {
-                EventType eventType = event.getEventType();
-                EventSubtype eventSubtype = event.getEventSubtype();
-                CharSequence vin = event.getVin();
-                AvroKey<CharSequence> vinKey = new AvroKey<CharSequence>(vin);
-                VinImpressionCounts.Builder builder = VinImpressionCounts.newBuilder();
-                builder.setUniqueUser(0L);
-                builder.setSubmitContactForm(0L);
-                builder.setShareMarketReport(0L);
-
-                if(!uniques.contains(vin)) {
-                    builder.setUniqueUser(1L);
-                    uniques.add(vin);
-                }
-                if(eventType.equals(EventType.SUBMIT) && eventSubtype.equals(EventSubtype.CONTACT_FORM) &&
-                        !submitContactForm.contains(vin)) {
-                    builder.setSubmitContactForm(1L);
-                    submitContactForm.add(vin);
-                }
-                if(eventType.equals(EventType.SHARE) && eventSubtype.equals(EventSubtype.MARKET_REPORT) &&
-                        !shareMarketReport.contains(vin)) {
-                    builder.setShareMarketReport(1l);
-                    shareMarketReport.add(vin);
-                }
-                if(eventType.equals(EventType.CLICK)) {
-                    if(!(clicks.containsKey(eventSubtype) && clicks.get(eventSubtype).contains(vin))) {
-                        Map<CharSequence, Long> click = new HashMap<CharSequence, Long>();
-                        click.put(eventSubtype.name(), 1L);
-                        builder.setClicks(click);
-                        if(!(clicks.containsKey(eventSubtype)))
-                            clicks.put(eventSubtype, new HashSet<CharSequence>());
-                        clicks.get(eventSubtype).add(vin);
-                    }
-                }
-                context.write(vinKey, new AvroValue<VinImpressionCounts>(builder.build()));
+                set.add(event.getEventType());
             }
-            multipleOutputs.write ("sessionType", key,  value,  category );
+
+            String sessionType;
+
+            if(set.contains(EventType.CHANGE) || set.contains(EventType.CONTACT_FORM_STATUS) ||
+                    set.contains(EventType.EDIT) || set.contains(EventType.SUBMIT)) {
+                sessionType = "Submitter";
+                context.getCounter(SESSION_COUNTERS.SUBMITTER).increment(1);
+            } else if(set.contains(EventType.SHARE)) {
+                sessionType = "Sharer";
+                context.getCounter(SESSION_COUNTERS.SHARER).increment(1);
+            } else if(set.contains(EventType.CLICK)) {
+                sessionType = "Clicker";
+                context.getCounter(SESSION_COUNTERS.CLICKER).increment(1);
+            } else if(set.contains(EventType.SHOW)) {
+                sessionType = "Shower";
+                context.getCounter(SESSION_COUNTERS.SHOWER).increment(1);
+            } else if(set.size() == 1 && set.contains(EventType.VISIT)) {
+                sessionType = "Visitor";
+                context.getCounter(SESSION_COUNTERS.VISITOR).increment(1);
+            } else {
+                sessionType = "Other";
+                context.getCounter(SESSION_COUNTERS.OTHER).increment(1);
+            }
+
+            multipleOutputs.write (sessionType,
+                                   new AvroKey<CharSequence>(key.toString()),
+                                   new AvroValue<Session>(value.datum()),
+                                   sessionType);
 
         }
 
@@ -121,12 +125,12 @@ public class MultipleOutput extends Configured implements Tool {
      */
     public int run(String[] args) throws Exception {
         if (args.length != 3) {
-            System.err.println("Usage: ReduceJoin <input path1> <input path2> <output path>");
+            System.err.println("Usage: MultipleOutput <input path1> <input path2> <output path>");
             return -1;
         }
 
         Configuration conf = getConf();
-        Job job = new Job(conf, "ReduceJoin");
+        Job job = new Job(conf, "MultipleOutput");
         String[] appArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
 
         // Identify the JAR file to replicate to all machines.
@@ -138,14 +142,16 @@ public class MultipleOutput extends Configured implements Tool {
 //        job.setInputFormatClass(TextInputFormat.class);
 //        job.setMapperClass(MapClass.class);
 //        job.setMapOutputKeyClass(Text.class);
-        AvroJob.setMapOutputKeySchema(job, Schema.create(Schema.Type.STRING));
-        AvroJob.setMapOutputValueSchema(job, VinImpressionCounts.getClassSchema());
+
+//        AvroJob.setMapOutputKeySchema(job, Schema.create(Schema.Type.STRING));
+//        AvroJob.setMapOutputValueSchema(job, VinImpressionCounts.getClassSchema());
         AvroJob.setInputKeySchema(job, Session.getClassSchema());
-        MultipleInputs.addInputPath(job, new Path(appArgs[0]), AvroKeyInputFormat.class, SessionMapClass.class);
+//        MultipleInputs.addInputPath(job, new Path(appArgs[0]), AvroKeyInputFormat.class, SessionMapClass.class);
 
         MultipleOutputs.addNamedOutput(job, "sessionType", TextOutputFormat.class, Text.class, Text.class);
         MultipleOutputs.setCountersEnabled(job, true);
-        AvroMultipleOutputs.addNamedOutput (job, "sessionType", AvroKeyValueOutputFormat.class , key schema, value schema);
+        AvroMultipleOutputs.addNamedOutput(job, "sessionType", AvroKeyValueOutputFormat.class ,
+                Schema.create(Schema.Type.STRING), Session.getClassSchema());
 
         //Specify the Combiner
 
@@ -163,6 +169,9 @@ public class MultipleOutput extends Configured implements Tool {
         // Initiate the map-reduce job, and wait for completion.
         job.waitForCompletion(true);
 
+        Counters counters = job.getCounters();
+        System.out.println(counters.findCounter(SESSION_COUNTERS.SUBMITTER).getDisplayName() + ":" +
+                counters.findCounter(SESSION_COUNTERS.SUBMITTER).getValue());
         return 0;
     }
     /**
@@ -171,7 +180,7 @@ public class MultipleOutput extends Configured implements Tool {
      * job and waits for it to complete.
      */
     public static void main(String[] args) throws Exception {
-        printClassPath();
+        // printClassPath();
         int res = ToolRunner.run(new Configuration(), new MultipleOutput(), args);
         System.exit(res);
     }
