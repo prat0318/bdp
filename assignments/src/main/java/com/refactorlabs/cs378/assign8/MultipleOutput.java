@@ -24,6 +24,7 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -76,6 +77,7 @@ public class MultipleOutput extends Configured implements Tool {
             List<Event> events = value.datum().getEvents();
             Set<EventType> set = new HashSet<EventType>();
 
+            System.out.println("Event SIZE: " + events.size());
             if(events.size() > 1000) return;
 
             for (Event event: events) {
@@ -105,10 +107,13 @@ public class MultipleOutput extends Configured implements Tool {
                 context.getCounter(SESSION_COUNTERS.OTHER).increment(1);
             }
 
-            multipleOutputs.write (sessionType,
-                                   new AvroKey<CharSequence>(key.toString()),
-                                   new AvroValue<Session>(value.datum()),
-                                   sessionType);
+            Session.Builder builder = Session.newBuilder();
+            builder.setUserId(key.toString());
+            builder.setEvents(events);
+            multipleOutputs.write(sessionType,
+                    new AvroKey<CharSequence>(key.toString()),
+                    new AvroValue<Session>(builder.build()),
+                    sessionType);
 
         }
 
@@ -124,8 +129,8 @@ public class MultipleOutput extends Configured implements Tool {
      * setup and configuration.
      */
     public int run(String[] args) throws Exception {
-        if (args.length != 3) {
-            System.err.println("Usage: MultipleOutput <input path1> <input path2> <output path>");
+        if (args.length != 2) {
+            System.err.println("Usage: MultipleOutput <input path> <output path>");
             return -1;
         }
 
@@ -138,33 +143,64 @@ public class MultipleOutput extends Configured implements Tool {
         // Use this JAR first in the classpath (We also set a bootstrap script in AWS)
         conf.set("mapreduce.user.classpath.first", "true");
 
+        AvroJob.setMapOutputKeySchema(job,Schema.create(Schema.Type.STRING));
+        AvroJob.setMapOutputValueSchema(job, Session.getClassSchema());
+        AvroJob.setInputKeySchema(job, Session.getClassSchema());
+
         // Specify the Map
-//        job.setInputFormatClass(TextInputFormat.class);
-//        job.setMapperClass(MapClass.class);
-//        job.setMapOutputKeyClass(Text.class);
+        job.setInputFormatClass(AvroKeyInputFormat.class);
+        job.setMapperClass(SessionMapClass.class);
+        job.setMapOutputKeyClass(Text.class);
+        job.setOutputFormatClass(AvroKeyValueOutputFormat.class);
+        AvroJob.setOutputKeySchema(job,Schema.create(Schema.Type.STRING));
+        AvroJob.setOutputValueSchema(job,Session.getClassSchema());
+        job.setOutputValueClass(AvroValue.class);
 
 //        AvroJob.setMapOutputKeySchema(job, Schema.create(Schema.Type.STRING));
 //        AvroJob.setMapOutputValueSchema(job, VinImpressionCounts.getClassSchema());
-        AvroJob.setInputKeySchema(job, Session.getClassSchema());
+//        AvroJob.setInputKeySchema(job, Session.getClassSchema());
 //        MultipleInputs.addInputPath(job, new Path(appArgs[0]), AvroKeyInputFormat.class, SessionMapClass.class);
 
-        MultipleOutputs.addNamedOutput(job, "sessionType", TextOutputFormat.class, Text.class, Text.class);
+        MultipleOutputs.addNamedOutput(job, "Submitter", AvroKeyValueOutputFormat.class, AvroKey.class, AvroValue.class);
+        MultipleOutputs.addNamedOutput(job, "Sharer", AvroKeyValueOutputFormat.class, AvroKey.class, AvroValue.class);
+        MultipleOutputs.addNamedOutput(job, "Clicker", AvroKeyValueOutputFormat.class, AvroKey.class, AvroValue.class);
+        MultipleOutputs.addNamedOutput(job, "Shower", AvroKeyValueOutputFormat.class, AvroKey.class, AvroValue.class);
+        MultipleOutputs.addNamedOutput(job, "Visitor", AvroKeyValueOutputFormat.class, AvroKey.class, AvroValue.class);
+        MultipleOutputs.addNamedOutput(job, "Other", AvroKeyValueOutputFormat.class, AvroKey.class, AvroValue.class);
+
         MultipleOutputs.setCountersEnabled(job, true);
-        AvroMultipleOutputs.addNamedOutput(job, "sessionType", AvroKeyValueOutputFormat.class ,
+
+        AvroMultipleOutputs.addNamedOutput(job, "Submitter", AvroKeyValueOutputFormat.class ,
+                Schema.create(Schema.Type.STRING), Session.getClassSchema());
+        AvroMultipleOutputs.addNamedOutput(job, "Sharer", AvroKeyValueOutputFormat.class ,
+                Schema.create(Schema.Type.STRING), Session.getClassSchema());
+        AvroMultipleOutputs.addNamedOutput(job, "Clicker", AvroKeyValueOutputFormat.class ,
+                Schema.create(Schema.Type.STRING), Session.getClassSchema());
+        AvroMultipleOutputs.addNamedOutput(job, "Shower", AvroKeyValueOutputFormat.class ,
+                Schema.create(Schema.Type.STRING), Session.getClassSchema());
+        AvroMultipleOutputs.addNamedOutput(job, "Visitor", AvroKeyValueOutputFormat.class ,
+                Schema.create(Schema.Type.STRING), Session.getClassSchema());
+        AvroMultipleOutputs.addNamedOutput(job, "Other", AvroKeyValueOutputFormat.class ,
                 Schema.create(Schema.Type.STRING), Session.getClassSchema());
 
         //Specify the Combiner
 
 //        job.setCombinerClass(CombinerClass.class);
 
-        // Specify the Reduce
-        job.setOutputFormatClass(TextOutputFormat.class);
+        // Specify the Reducer
+        job.setNumReduceTasks(0);
+//        job.setOutputFormatClass(TextOutputFormat.class);
 //        job.setReducerClass(ReduceClass.class);
 //        AvroJob.setOutputKeySchema(job,
 //                Pair.getPairSchema(Schema.create(Schema.Type.STRING), VinImpressionCounts.getClassSchema()));
-        job.setOutputValueClass(NullWritable.class);
+//        job.setOutputValueClass(NullWritable.class);
 
-        FileOutputFormat.setOutputPath(job, new Path(appArgs[2]));
+        // Grab the input file and output directory from the command line.
+        String[] inputPaths = appArgs[0].split(",");
+        for (String inputPath : inputPaths) {
+            FileInputFormat.addInputPath(job, new Path(inputPath));
+        }
+        FileOutputFormat.setOutputPath(job, new Path(appArgs[1]));
 
         // Initiate the map-reduce job, and wait for completion.
         job.waitForCompletion(true);
@@ -172,6 +208,16 @@ public class MultipleOutput extends Configured implements Tool {
         Counters counters = job.getCounters();
         System.out.println(counters.findCounter(SESSION_COUNTERS.SUBMITTER).getDisplayName() + ":" +
                 counters.findCounter(SESSION_COUNTERS.SUBMITTER).getValue());
+        System.out.println(counters.findCounter(SESSION_COUNTERS.SHARER).getDisplayName() + ":" +
+                counters.findCounter(SESSION_COUNTERS.SHARER).getValue());
+        System.out.println(counters.findCounter(SESSION_COUNTERS.CLICKER).getDisplayName() + ":" +
+                counters.findCounter(SESSION_COUNTERS.CLICKER).getValue());
+        System.out.println(counters.findCounter(SESSION_COUNTERS.SHOWER).getDisplayName() + ":" +
+                counters.findCounter(SESSION_COUNTERS.SHOWER).getValue());
+        System.out.println(counters.findCounter(SESSION_COUNTERS.VISITOR).getDisplayName() + ":" +
+                counters.findCounter(SESSION_COUNTERS.VISITOR).getValue());
+        System.out.println(counters.findCounter(SESSION_COUNTERS.OTHER).getDisplayName() + ":" +
+                counters.findCounter(SESSION_COUNTERS.OTHER).getValue());
         return 0;
     }
     /**

@@ -1,0 +1,8 @@
+{"namespace": "com.refactorlabs.cs378.assign9",
+ "type": "record",
+ "name": "ClickSubtypeStatisticsKey",
+ "fields": [
+     {"name": "session_type",   "type": "string", "default": "any"},
+     {"name": "click_subtype", "type": "string", "default": "any"}
+ ]
+}

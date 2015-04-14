@@ -9,13 +9,23 @@ export RND=$(date +%s)
 export ENV=bdp
 export EID=pa6768
 export ASSGN=$1
-export MainClass=MultipleOutput
+export MainClass=AggregateJobFinal
 # Small is 6898/sessions.avro
-export input1=pa6768/output/assign7_avro_1426966898/sessions.avro
-# export input1=pa6768/output/assign7_avro_1426964469/sessions2.avro
+# export input1=pa6768/output/assign7_avro_1426966898/sessions.avro
+export input1=pa6768/output/assign7_avro_1426964469/sessions2.avro
+
+# export input1=pa6768/output/assign8_1427845324/Clicker-m-00000.avro
+# export input2=pa6768/output/assign8_1427845324/Clicker-m-00000.avro
+# export input3=pa6768/output/assign8_1427845324/Clicker-m-00000.avro
+
+# export input1=pa6768/output/assign8_1427847082/Clicker-m-*.avro
+# export input2=pa6768/output/assign8_1427847082/Sharer-m-*.avro
+# export input3=pa6768/output/assign8_1427847082/Submitter-m-*.avro
+# export input1="pa6768/output/assign9_1428625349_submitter/part-*.avro;s3n://utcs378/pa6768/output/assign9_1428625349_clicker/part-*.avro;s3n://utcs378/pa6768/output/assign9_1428625349_sharer/part-*.avro"
+
 # export input2=dataSet7Small.csv
 # export input2=dataSet7.csv
-# export JAVA_HOME=/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
+export JAVA_HOME=/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
 
 echo "Building package..."
 mvn package
@@ -27,8 +37,8 @@ if [ $? -eq 0 ]; then
     echo "Launching the EMR job..."
     job_id_raw=$(aws emr create-cluster --log-uri s3://utcs378/$EID/logs/ \
                            --ami-version 2.4.7 \
-                           --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m1.small \
-                                             InstanceGroupType=CORE,InstanceCount=1,InstanceType=m1.small  \
+                           --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m1.large \
+                                             InstanceGroupType=CORE,InstanceCount=1,InstanceType=m1.large  \
                            --bootstrap-actions "Path=s3://utcs378/$EID/bootstrap.sh,Name=Classpath" \
                            --steps "Type=CUSTOM_JAR,"`
                                    `"Name=CustomJAR,"`

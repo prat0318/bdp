@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.refactorlabs.cs378</groupId>
   <artifactId>bdp</artifactId>
-  <version>0.7</version>
+  <version>0.10</version>
   <description>Java code for CS 378 - Big Data Programming</description>
   <developers>
     <developer>
@@ -17,6 +17,10 @@
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.1</version>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
@@ -39,6 +43,16 @@
               <artifactSet>
                 <excludes />
               </artifactSet>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
             </configuration>
           </execution>
         </executions>
@@ -70,34 +84,6 @@
       <scope>provided</scope>
       <exclusions>
         <exclusion>
-          <artifactId>commons-cli</artifactId>
-          <groupId>commons-cli</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>xmlenc</artifactId>
-          <groupId>xmlenc</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>commons-httpclient</artifactId>
-          <groupId>commons-httpclient</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>commons-codec</artifactId>
-          <groupId>commons-codec</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>commons-math</artifactId>
-          <groupId>org.apache.commons</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>commons-configuration</artifactId>
-          <groupId>commons-configuration</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>commons-net</artifactId>
-          <groupId>commons-net</groupId>
-        </exclusion>
-        <exclusion>
           <artifactId>jasper-runtime</artifactId>
           <groupId>tomcat</groupId>
         </exclusion>
@@ -118,20 +104,12 @@
           <groupId>commons-el</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>jets3t</artifactId>
-          <groupId>net.java.dev.jets3t</groupId>
-        </exclusion>
-        <exclusion>
           <artifactId>kfs</artifactId>
           <groupId>net.sf.kosmosfs</groupId>
         </exclusion>
         <exclusion>
           <artifactId>hsqldb</artifactId>
           <groupId>hsqldb</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>oro</artifactId>
-          <groupId>oro</groupId>
         </exclusion>
         <exclusion>
           <artifactId>core</artifactId>
@@ -153,6 +131,7 @@
     <guava.version>18.0</guava.version>
     <jackson.version>1.8.8</jackson.version>
     <hadoop-core.version>1.0.3</hadoop-core.version>
+    <spark.version>1.0</spark.version>
   </properties>
 </project>
 
